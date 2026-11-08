@@ -367,27 +367,41 @@ textarea{min-height:60px;resize:vertical}
   }
 
   // ---------- Wikipedia ----------
+  // Fotos para plantas de la base: se busca por nombre científico.
+  // Plantas fuera de la base: solo artículos con ficha de especie que hablen de una planta.
   const wikiCache = new Map();
-  async function wiki(names, withText){
+  const PLANTY = /\b(planta|plantas|arbusto|árbol|arbol|hierba|herbácea|herbacea|enredadera|trepadora|suculenta|cactus|helecho|flor|flores|bulbo|angiosperma|familia [a-z]+aceae|[a-z]+aceae)\b/i;
+  async function wikiPhoto(names){
     for(const name of names.filter(Boolean)){
-      const key = name.toLowerCase() + (withText ? "|t" : "");
+      const key = "p|" + name.toLowerCase();
       if(wikiCache.has(key)){ const v = wikiCache.get(key); if(v) return v; continue; }
       for(const lang of ["es","en"]){
         try{
-          const extra = withText && lang === "es" ? "|extracts&exintro=1&explaintext=1&exsentences=3" : "";
-          const u = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&generator=search&gsrsearch=${encodeURIComponent(name)}&gsrlimit=3&prop=pageimages${extra}&piprop=thumbnail&pithumbsize=800`;
+          const u = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&generator=search&gsrsearch=${encodeURIComponent(name)}&gsrlimit=3&prop=pageimages&piprop=thumbnail&pithumbsize=800`;
           const j = await (await fetch(u)).json();
           const pages = Object.values(j?.query?.pages || {}).sort((a,b) => a.index - b.index);
-          const hit = pages.find(p => p.thumbnail?.source) || (withText ? pages[0] : null);
-          if(hit){
-            const v = {src: hit.thumbnail?.source || null, title: hit.title, text: hit.extract || "", page: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g,"_"))}`};
-            wikiCache.set(key, v); return v;
-          }
+          const hit = pages.find(p => p.thumbnail?.source);
+          if(hit){ const v = {src: hit.thumbnail.source, title: hit.title, page: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g,"_"))}`}; wikiCache.set(key, v); return v; }
         }catch{}
       }
       wikiCache.set(key, null);
     }
     return null;
+  }
+  async function wikiPlant(q){
+    const key = "t|" + q.toLowerCase();
+    if(wikiCache.has(key)) return wikiCache.get(key);
+    let found = null;
+    try{
+      const search = `${q} hastemplate:"Ficha de taxón"`;
+      const u = `https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&generator=search&gsrsearch=${encodeURIComponent(search)}&gsrlimit=6&prop=pageimages|extracts&exintro=1&explaintext=1&exsentences=3&exlimit=6&piprop=thumbnail&pithumbsize=800`;
+      const j = await (await fetch(u)).json();
+      const pages = Object.values(j?.query?.pages || {}).sort((a,b) => a.index - b.index);
+      const hit = pages.find(p => PLANTY.test(p.extract || ""));
+      if(hit) found = {src: hit.thumbnail?.source || null, title: hit.title, text: hit.extract || "", page: `https://es.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g,"_"))}`};
+    }catch{ return null; }
+    wikiCache.set(key, found);
+    return found;
   }
 
   // ---------- buscar en la base ----------
@@ -457,7 +471,7 @@ textarea{min-height:60px;resize:vertical}
 
   async function fillHero(out, names){
     const box = out.querySelector("[data-hero]"); if(!box) return null;
-    const img = await wiki(names, false);
+    const img = await wikiPhoto(names);
     if(!box.isConnected) return img;
     if(img?.src){
       box.classList.remove("loading");
@@ -469,9 +483,9 @@ textarea{min-height:60px;resize:vertical}
   async function renderUnknown(out, q){
     out.hidden = false;
     out.innerHTML = `<p class="thinking">Buscando "${esc(q)}" en Wikipedia…</p>`;
-    const w = await wiki([q], true);
+    const w = await wikiPlant(q);
     if(!w){
-      out.innerHTML = `<p class="banner">No encontré "${esc(q)}". Revisá cómo está escrito o probá con el nombre científico.</p>`;
+      out.innerHTML = `<p class="banner">No encontré una planta llamada "${esc(q)}". Revisá cómo está escrito, probá con el nombre científico o identificala con Google Lens.</p>`;
       return;
     }
     out.innerHTML = `
