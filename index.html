@@ -35,7 +35,7 @@ h1{font-size:1.9rem;font-weight:700}
 h2{font-size:1.1rem;font-weight:700}
 .top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
 .top-actions{display:flex;gap:8px}
-.date{color:var(--muted);font-size:.85rem;text-transform:capitalize}
+.date{color:var(--muted);font-size:.85rem}
 .tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
 .tabs button{border:0;background:transparent;color:var(--muted);font:600 .95rem var(--body);padding:10px;border-radius:9px;cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--accent);color:var(--surface)}
@@ -275,7 +275,7 @@ textarea{min-height:60px;resize:vertical}
   };
   const fmtDays = (n, verb) => n < 0 ? `${verb} · atrasado ${-n} d` : n === 0 ? `${verb} hoy` : n === 1 ? `${verb} mañana` : `${verb} en ${n} d`;
   const month = () => new Date().toLocaleDateString("es-AR",{month:"long"});
-  $("today").textContent = new Date().toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
+  { const t = new Date().toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}); $("today").textContent = t[0].toUpperCase() + t.slice(1); }
 
   // ---------- ciclo ----------
   const CYCLE = {
