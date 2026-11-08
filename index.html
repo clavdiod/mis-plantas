@@ -104,6 +104,11 @@ textarea{min-height:60px;resize:vertical}
 .cyclebox.perenne{background:var(--accent-soft)}
 .cyclebox strong{font-family:var(--display);font-size:1rem}
 .cyclebox p{margin:0;font-size:.9rem}
+.photolinks{display:flex;gap:8px;flex-wrap:wrap}
+.suggest{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:-6px}
+.suggest button{border:0;border-top:1px solid var(--line);background:var(--surface);color:var(--fg);text-align:left;padding:10px 12px;font:inherit;cursor:pointer}
+.suggest button:first-child{border-top:0}
+.suggest i{color:var(--muted);font-size:.85rem}
 .alts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.85rem;color:var(--muted)}
 .scrim{position:fixed;inset:0;background:rgb(0 0 0 / .45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
 .sheet{background:var(--surface);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
@@ -126,7 +131,7 @@ textarea{min-height:60px;resize:vertical}
       <div class="date" id="today"></div>
     </div>
     <div class="top-actions">
-      <button class="btn icon" id="cfgBtn" aria-label="Ajustes">⚙</button>
+      <button class="btn icon" id="cfgBtn" aria-label="Copia de seguridad">⚙</button>
       <button class="btn primary" id="addBtn">+ Planta</button>
     </div>
   </header>
@@ -135,8 +140,6 @@ textarea{min-height:60px;resize:vertical}
     <button role="tab" id="tabMine" aria-selected="true">Mis plantas</button>
     <button role="tab" id="tabId" aria-selected="false">Buscar</button>
   </div>
-
-  <p id="keyBanner" class="banner" hidden>Para buscar plantas y analizar fotos, cargá tu clave de Anthropic en <button class="mini" id="keyBannerBtn">Ajustes</button></p>
 
   <main id="viewMine" class="section">
     <section class="section">
@@ -155,24 +158,18 @@ textarea{min-height:60px;resize:vertical}
         <input type="text" id="searchIn" placeholder="Buscá una planta: cretona, lavanda, potus…" aria-label="Nombre de la planta" autocomplete="off" enterkeyhint="search">
         <button class="btn primary" id="searchBtn" type="submit">Buscar</button>
       </div>
+      <div class="suggest" id="suggest" hidden></div>
     </form>
     <div class="card" id="searchOut" hidden></div>
 
-    <h2 style="margin-top:6px">O sacale una foto</h2>
     <div class="card">
-      <div class="mode" role="radiogroup">
-        <label><input type="radio" name="mode" id="modeId" value="id" checked> ¿Qué planta es?</label>
-        <label><input type="radio" name="mode" id="modeDx" value="dx"> ¿Qué le pasa?</label>
+      <h2>¿No sabés cómo se llama?</h2>
+      <p class="note">Sacale una foto con Google Lens o PlantNet, que son gratis. Cuando sepas el nombre, buscalo acá.</p>
+      <div class="photolinks">
+        <a class="btn" href="https://lens.google.com/" target="_blank" rel="noopener">Google Lens</a>
+        <a class="btn" href="https://identify.plantnet.org/es" target="_blank" rel="noopener">PlantNet</a>
       </div>
-      <div class="drop">
-        <div id="dropMsg">Sacá o elegí una foto<br><span class="note">Mejor con buena luz y la hoja bien visible</span></div>
-        <img id="dropImg" alt="Foto elegida" hidden>
-        <input type="file" id="fileIn" accept="image/*" aria-label="Elegir foto">
-      </div>
-      <textarea id="idNote" placeholder="Opcional: contale algo (ej. hojas amarillas desde hace una semana, está en el balcón)"></textarea>
-      <button class="btn primary" id="askBtn" disabled>Analizar foto</button>
     </div>
-    <div class="card" id="idOut" hidden></div>
   </main>
 </div>
 
@@ -203,13 +200,15 @@ textarea{min-height:60px;resize:vertical}
       </select>
     </label>
     <div class="row">
-      <label class="field"><span>Regar cada (días)</span><input type="number" id="fWater" min="1" max="60" value="7"></label>
-      <label class="field"><span>Abonar cada (días)</span><input type="number" id="fFert" min="0" max="365" value="30"></label>
+      <label class="field"><span>Regar cada (días) · sept a marzo</span><input type="number" id="fWaterV" min="0" max="60" value="7"></label>
+      <label class="field"><span>Regar cada (días) · abril a agosto</span><input type="number" id="fWaterI" min="0" max="60" value="14"></label>
     </div>
+    <p class="note" style="margin-top:-6px">Poné 0 si no se riega en esa época.</p>
     <div class="row">
+      <label class="field"><span>Abonar cada (días) · sept a marzo</span><input type="number" id="fFert" min="0" max="365" value="30"></label>
       <label class="field"><span>Último riego</span><input type="date" id="fLastW"></label>
-      <label class="field"><span>Último abono</span><input type="date" id="fLastF"></label>
     </div>
+    <label class="field"><span>Último abono</span><input type="date" id="fLastF"></label>
     <label class="field"><span>Notas</span><textarea id="fNotes" placeholder="Cuidados, consejos, cuándo la compraste…"></textarea></label>
     <div id="delConfirm" class="confirm" hidden>¿Borrar esta planta? <button type="button" class="btn danger" id="delYes">Sí, borrar</button><button type="button" class="btn ghost" id="delNo">Cancelar</button></div>
     <div class="sheet-actions">
@@ -220,15 +219,9 @@ textarea{min-height:60px;resize:vertical}
   </form>
 </div>
 
-<!-- Ajustes -->
+<!-- Copia de seguridad -->
 <div class="scrim" id="cfgScrim" hidden>
-  <form class="sheet" id="cfgSheet" novalidate>
-    <h2>Ajustes</h2>
-    <label class="field"><span>Clave de API de Anthropic</span>
-      <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
-    </label>
-    <p class="note">La sacás de console.anthropic.com → API Keys. Queda guardada solo en este celu, nunca se sube a GitHub. Te conviene ponerle un límite de gasto mensual en la consola.</p>
-    <p class="note" id="keyStatus"></p>
+  <div class="sheet">
     <h2>Copia de seguridad</h2>
     <p class="note">Tus plantas se guardan en este navegador. Si cambiás de celu o borrás los datos del navegador, se pierden: bajá una copia de vez en cuando.</p>
     <div class="sheet-actions" style="justify-content:flex-start">
@@ -237,74 +230,79 @@ textarea{min-height:60px;resize:vertical}
         <input type="file" id="importIn" accept="application/json,.json" style="position:absolute;inset:0;opacity:0">
       </label>
     </div>
-    <div class="sheet-actions">
-      <button type="button" class="btn ghost" id="cfgCancel">Cerrar</button>
-      <button type="submit" class="btn primary" id="cfgSave">Guardar clave</button>
-    </div>
-  </form>
+    <div class="sheet-actions"><button type="button" class="btn ghost" id="cfgCancel">Cerrar</button></div>
+  </div>
 </div>
 
 <div class="toast" id="toast" hidden></div>
 
+<script src="plants.js"></script>
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const DAY = 864e5;
-  const STORE = "misPlantas.v1", KEY = "misPlantas.apiKey";
-  const MODEL_TEXT = "claude-haiku-5-5", MODEL_VISION = "claude-sonnet-5-5";
-  let plants = [];
-  let editingId = null, formPhotoData = null, formPhotoUrl = null;
-  let idFile = null, idPhotoData = null;
+  const DAY = 864e5, STORE = "misPlantas.v1";
+  const DB = window.PLANTS || [];
+  let plants = [], editingId = null, formPhotoData = null, formPhotoUrl = null;
 
   // ---------- almacenamiento ----------
-  function load(){ try{ plants = JSON.parse(localStorage.getItem(STORE) || "[]"); }catch{ plants = []; } }
+  function load(){
+    try{ plants = JSON.parse(localStorage.getItem(STORE) || "[]"); }catch{ plants = []; }
+    migrate();
+  }
+  function migrate(){ plants.forEach(p => { if(p.wv == null){ p.wv = p.waterEvery || 7; p.wi = p.waterEvery || 7; } }); }
   function persist(){
     try{ localStorage.setItem(STORE, JSON.stringify(plants)); return true; }
     catch{ toast("El celu se quedó sin espacio para fotos. Borrá alguna planta o usá fotos más chicas."); return false; }
   }
-  const getKey = () => { try{ return localStorage.getItem(KEY) || ""; }catch{ return ""; } };
 
-  // ---------- fechas ----------
+  // ---------- fechas y temporada ----------
   const startOfDay = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
   const todayISO = () => { const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
   const parseISO = s => { if(!s) return null; const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+  const MONTH = new Date().getMonth()+1;
+  const WARM = MONTH >= 9 || MONTH <= 3;           // septiembre a marzo
+  const waterNow = p => WARM ? p.wv : p.wi;
+  const fertNow = p => WARM ? (p.fertEvery || 0) : 0;
   const daysUntil = (lastISO, every) => {
     if(!every) return null;
     const last = parseISO(lastISO); if(!last) return 0;
     return Math.round((startOfDay(last.getTime() + every*DAY) - startOfDay(new Date()))/DAY);
   };
   const fmtDays = (n, verb) => n < 0 ? `${verb} · atrasado ${-n} d` : n === 0 ? `${verb} hoy` : n === 1 ? `${verb} mañana` : `${verb} en ${n} d`;
-  const month = () => new Date().toLocaleDateString("es-AR",{month:"long"});
   { const t = new Date().toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}); $("today").textContent = t[0].toUpperCase() + t.slice(1); }
 
   // ---------- ciclo ----------
   const CYCLE = {
     perenne:{t:"Siempre verde", d:"Sigue con hojas todo el año."},
     caduca:{t:"Pierde las hojas en otoño", d:"Parece seca en invierno pero está en reposo. Rebrota en primavera: no la tires."},
-    bulbo:{t:"Se seca y rebrota", d:"La parte de arriba se seca en otoño o invierno y vuelve a brotar desde la raíz o el bulbo. Dejá la maceta."},
+    bulbo:{t:"Se seca y rebrota", d:"La parte de arriba se seca y vuelve a brotar desde la raíz o el bulbo. Dejá la maceta."},
     anual:{t:"Planta anual", d:"Cumple su ciclo en un año y muere. Podés juntar semillas para la próxima temporada."}
   };
-  // Hemisferio sur: reposo abril a agosto, rebrote septiembre a noviembre
-  function seasonChip(c){
-    const m = new Date().getMonth()+1, rest = m>=4 && m<=8, spring = m>=9 && m<=11;
-    if(c==="caduca"||c==="bulbo") return rest ? "En reposo · no la tires" : spring ? "Rebrota en esta época" : null;
-    if(c==="anual") return rest ? "Anual · cerca del fin de su ciclo" : "Anual";
+  const ALIVE = {
+    caduca:"Raspá apenas un tallo con la uña: si abajo está verde, está viva.",
+    bulbo:"Tocá la base o desenterrá apenas el bulbo: si está firme y no huele mal, está vivo."
+  };
+  const DEFAULT_REST = [4,5,6,7,8];
+  function seasonChip(p){
+    const rest = (p.rest && p.rest.length ? p.rest : DEFAULT_REST).includes(MONTH);
+    const after = (p.rest && p.rest.length ? p.rest : DEFAULT_REST).includes(MONTH === 1 ? 12 : MONTH-1);
+    if(p.cycle==="caduca"||p.cycle==="bulbo") return rest ? "En reposo · no la tires" : after ? "Rebrota en esta época" : null;
+    if(p.cycle==="anual") return rest ? "Anual · fin de su ciclo" : "Anual";
     return null;
   }
 
   // ---------- lista ----------
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const nextDue = p => Math.min(daysUntil(p.lastWatered,p.waterEvery) ?? 999, p.fertEvery ? daysUntil(p.lastFert,p.fertEvery) : 999);
+  const nextDue = p => Math.min(daysUntil(p.lastWatered, waterNow(p)) ?? 999, daysUntil(p.lastFert, fertNow(p)) ?? 999);
   const photoOf = p => p.photo || p.photoUrl || null;
 
   function plantRow(p){
-    const w = daysUntil(p.lastWatered, p.waterEvery);
-    const f = p.fertEvery ? daysUntil(p.lastFert, p.fertEvery) : null;
+    const w = daysUntil(p.lastWatered, waterNow(p)), f = daysUntil(p.lastFert, fertNow(p));
     const cls = n => n < 0 ? "late" : n === 0 ? "due" : "";
     const chips = [];
-    if(w !== null) chips.push(`<span class="chip ${cls(w)}">${fmtDays(w,"Riego")}</span>`);
+    chips.push(w !== null ? `<span class="chip ${cls(w)}">${fmtDays(w,"Riego")}</span>` : `<span class="chip">Sin riego en esta época</span>`);
     if(f !== null) chips.push(`<span class="chip fert ${cls(f)}">${fmtDays(f,"Abono")}</span>`);
-    const sc = seasonChip(p.cycle); if(sc) chips.push(`<span class="chip cycle">${sc}</span>`);
+    const sc = seasonChip(p); if(sc) chips.push(`<span class="chip cycle">${sc}</span>`);
     const el = document.createElement("div");
     el.className = "plant";
     el.innerHTML = `
@@ -315,13 +313,13 @@ textarea{min-height:60px;resize:vertical}
         <div class="chips">${chips.join("")}</div>
       </div>
       <div class="acts">
-        <button class="mini w" data-act="water">Regué</button>
-        ${p.fertEvery ? `<button class="mini f" data-act="fert">Aboné</button>` : ""}
+        ${w !== null ? `<button class="mini w" data-act="water">Regué</button>` : ""}
+        ${f !== null ? `<button class="mini f" data-act="fert">Aboné</button>` : ""}
       </div>`;
     const info = el.querySelector(".pinfo");
     info.onclick = () => openSheet(p);
     info.onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openSheet(p); } };
-    el.querySelector('[data-act="water"]').onclick = () => mark(p,"lastWatered","Riego anotado");
+    const wb = el.querySelector('[data-act="water"]'); if(wb) wb.onclick = () => mark(p,"lastWatered","Riego anotado");
     const fb = el.querySelector('[data-act="fert"]'); if(fb) fb.onclick = () => mark(p,"lastFert","Abono anotado");
     return el;
   }
@@ -334,7 +332,7 @@ textarea{min-height:60px;resize:vertical}
     if(!plants.length){
       $("secNext").hidden = true; $("todayCount").textContent = "";
       const e = document.createElement("div"); e.className = "empty";
-      e.innerHTML = `<div><b>Todavía no cargaste plantas.</b><br>Buscá una por nombre o sacale una foto, y agregala con un toque.</div>
+      e.innerHTML = `<div><b>Todavía no cargaste plantas.</b><br>Buscá una por nombre y agregala con un toque.</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn primary" id="e1">Buscar una planta</button><button class="btn" id="e2">Cargar a mano</button></div>`;
       lt.append(e);
       e.querySelector("#e1").onclick = () => { showTab("id"); $("searchIn").focus(); };
@@ -368,197 +366,154 @@ textarea{min-height:60px;resize:vertical}
     });
   }
 
-  // ---------- Wikipedia: foto automática ----------
-  const imgCache = new Map();
-  async function wikiImage(names){
+  // ---------- Wikipedia ----------
+  const wikiCache = new Map();
+  async function wiki(names, withText){
     for(const name of names.filter(Boolean)){
-      const key = name.toLowerCase();
-      if(imgCache.has(key)){ const v = imgCache.get(key); if(v) return v; continue; }
+      const key = name.toLowerCase() + (withText ? "|t" : "");
+      if(wikiCache.has(key)){ const v = wikiCache.get(key); if(v) return v; continue; }
       for(const lang of ["es","en"]){
         try{
-          const u = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(name)}&gsrlimit=3&prop=pageimages&piprop=thumbnail&pithumbsize=800`;
+          const extra = withText && lang === "es" ? "|extracts&exintro=1&explaintext=1&exsentences=3" : "";
+          const u = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&generator=search&gsrsearch=${encodeURIComponent(name)}&gsrlimit=3&prop=pageimages${extra}&piprop=thumbnail&pithumbsize=800`;
           const j = await (await fetch(u)).json();
           const pages = Object.values(j?.query?.pages || {}).sort((a,b) => a.index - b.index);
-          const hit = pages.find(p => p.thumbnail?.source);
-          if(hit){ const v = {src: hit.thumbnail.source, page: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g,"_"))}`}; imgCache.set(key, v); return v; }
+          const hit = pages.find(p => p.thumbnail?.source) || (withText ? pages[0] : null);
+          if(hit){
+            const v = {src: hit.thumbnail?.source || null, title: hit.title, text: hit.extract || "", page: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g,"_"))}`};
+            wikiCache.set(key, v); return v;
+          }
         }catch{}
       }
-      imgCache.set(key, null);
+      wikiCache.set(key, null);
     }
     return null;
   }
 
-  // ---------- Claude ----------
-  async function askClaude({model, prompt, image}){
-    const key = getKey();
-    if(!key){ const e = new Error("nokey"); e.code = "nokey"; throw e; }
-    const content = [];
-    if(image) content.push({type:"image", source:{type:"base64", media_type:"image/jpeg", data:image.split(",")[1]}});
-    content.push({type:"text", text: prompt});
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST",
-      headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body: JSON.stringify({model, max_tokens:1800, messages:[{role:"user", content}]})
-    });
-    if(!res.ok){
-      const e = new Error("http"); e.code = res.status === 401 ? "badkey" : res.status === 429 ? "rate" : res.status === 400 ? "bad" : "http";
-      try{ e.detail = (await res.json())?.error?.message; }catch{}
-      throw e;
+  // ---------- buscar en la base ----------
+  const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+  DB.forEach(p => { p._keys = [p.n, ...(p.a||[]), p.s].map(norm); });
+  function find(q){
+    const k = norm(q); if(!k) return [];
+    const scored = [];
+    for(const p of DB){
+      let best = 0;
+      for(const key of p._keys){
+        if(key === k) best = Math.max(best, 100);
+        else if(key.startsWith(k)) best = Math.max(best, 80);
+        else if(key.split(" ").some(w => w.startsWith(k))) best = Math.max(best, 60);
+        else if(k.length >= 4 && key.includes(k)) best = Math.max(best, 40);
+        else if(k.length >= 5 && k.startsWith(key)) best = Math.max(best, 50);
+      }
+      if(best) scored.push([best, p]);
     }
-    const j = await res.json();
-    const text = (j.content || []).filter(c => c.type === "text").map(c => c.text).join("");
-    const m = text.match(/\{[\s\S]*\}/);
-    if(!m){ const e = new Error("json"); e.code = "json"; throw e; }
-    try{ return JSON.parse(m[0]); }catch{ const e = new Error("json"); e.code = "json"; throw e; }
+    return scored.sort((a,b) => b[0]-a[0] || a[1].n.localeCompare(b[1].n)).map(x => x[1]);
   }
-  const errMsg = e => ({
-    nokey: "Falta tu clave de Anthropic. Cargala en Ajustes (⚙).",
-    badkey: "La clave de Anthropic no es válida. Revisala en Ajustes (⚙).",
-    rate: "Hiciste muchas consultas seguidas. Esperá un ratito y probá de nuevo.",
-    json: "La respuesta vino incompleta. Probá de nuevo.",
-  }[e?.code] || (e?.detail ? `No se pudo consultar: ${e.detail}` : "No se pudo conectar. Revisá internet y probá de nuevo."));
 
-  const CARE_FIELDS = `"ciclo":"perenne|caduca|bulbo|anual" (perenne: sigue verde todo el año; caduca: pierde hojas en otoño y rebrota en primavera; bulbo: la parte aérea se seca y rebrota de raíz, rizoma o bulbo; anual: muere al terminar su ciclo),"cicloTexto":"qué le pasa en otoño e invierno en Buenos Aires y qué hacer","senalesViva":"cómo darse cuenta si sigue viva cuando parece seca","sol":"cuántas horas de sol y de qué tipo","riegoTexto":"cómo regar, en verano y en invierno","temperatura":"rango ideal y si aguanta heladas","sustrato":"tipo de tierra y drenaje","abonoTexto":"qué abono y cuándo","poda":"si se poda y cuándo","plagas":"plagas o problemas comunes"`;
-  const BASE = `Sos un experto en plantas de interior y jardín en Argentina (clima de Buenos Aires, hemisferio sur; hoy es ${month()}). Respondé SOLO con un objeto JSON válido, en español rioplatense, con frases cortas.`;
-  const SEARCH_PROMPT = q => `${BASE}
-El usuario busca: "${q}". Si el nombre es ambiguo, elegí la planta más común en Argentina con ese nombre y poné las otras en "otras".
-Forma: {"nombre":"nombre común en Argentina","cientifico":"nombre científico (género y especie)","riegoDias":número (cada cuántos días regar en esta época),"abonoDias":número (0 si no hace falta ahora),"luz":"Sombra|Luz indirecta|Sol parcial|Sol directo","toxicaMascotas":"sí|no|no se sabe",${CARE_FIELDS},"consejos":["3 a 5 consejos concretos"],"otras":["otras plantas con ese nombre, o vacío"]}
-Si no reconocés ninguna planta con ese nombre, poné "nombre":"No encontré esa planta" y riegoDias 0.`;
-  const ID_PROMPT = note => `${BASE}
-Mirá la foto e identificá la planta. Forma: {"nombre":"nombre común en Argentina","cientifico":"nombre científico","confianza":"alta|media|baja","riegoDias":número,"abonoDias":número,"luz":"Sombra|Luz indirecta|Sol parcial|Sol directo","toxicaMascotas":"sí|no|no se sabe",${CARE_FIELDS},"consejos":["3 a 5 consejos"]}
-Si la foto no muestra una planta, poné "nombre":"No reconozco una planta" y riegoDias 0.${note ? `\nContexto del usuario: ${note}` : ""}`;
-  const DX_PROMPT = note => `${BASE}
-Mirá la foto y decí qué problema puede tener la planta. Forma: {"nombre":"planta que parece ser","cientifico":"nombre científico si lo sabés","problema":"diagnóstico más probable, en una frase","confianza":"alta|media|baja","causas":["2 a 3 causas posibles"],"queHacer":["3 a 5 pasos concretos, del más urgente al menos"],"gravedad":"leve|moderada|grave","reposo":"si puede ser el reposo normal de la época (hojas que caen, parte aérea seca que rebrota en primavera) y no un problema, explicalo y cómo comprobar si sigue viva; si no aplica, dejalo vacío"}${note ? `\nContexto del usuario: ${note}` : ""}`;
+  // sugerencias mientras escribís
+  $("searchIn").addEventListener("input", () => {
+    const box = $("suggest"), q = $("searchIn").value;
+    const hits = q.trim().length >= 2 ? find(q).slice(0,6) : [];
+    box.hidden = !hits.length;
+    box.innerHTML = hits.map(p => `<button type="button" data-n="${esc(p.n)}"><b>${esc(p.n)}</b> <i>${esc(p.s)}</i></button>`).join("");
+    box.querySelectorAll("button").forEach(b => b.onclick = () => { $("searchIn").value = b.dataset.n; box.hidden = true; doSearch(); });
+  });
 
-  // ---------- resultados ----------
-  const confChip = c => {
-    const map = {alta:["var(--accent-soft)","var(--accent)"], media:["var(--warn-soft)","var(--warn)"], baja:["var(--bad-soft)","var(--bad)"]};
-    const [bg,fg] = map[c] || map.media;
-    return `<span class="conf" style="background:${bg};color:${fg}">Confianza ${esc(c||"media")}</span>`;
-  };
-  const list = a => Array.isArray(a) && a.length ? `<ul>${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  const TOX = {s:"Tóxica", n:"No tóxica", "?":"Sin datos seguros"};
+  const fmtEvery = d => d ? `cada ${d} días` : "no hace falta";
 
-  function heroHTML(){ return `<div class="hero loading" data-hero>Buscando foto…</div>`; }
-  async function fillHero(out, r, userPhoto){
+  function renderPlant(out, p, others){
+    const rows = [["Sol",p.sol],["Temperatura",p.temp],["Sustrato",p.sus],["Poda",p.poda],["Plagas",p.plag]].filter(([,v]) => v);
+    out.hidden = false;
+    out.innerHTML = `
+      <div class="hero loading" data-hero>Buscando foto…</div>
+      <div class="result">
+        <h3>${esc(p.n)}</h3>
+        <div class="sci">${esc(p.s)}</div>
+        <div class="cyclebox ${p.c}"><strong>${CYCLE[p.c].t}</strong><p>${esc(p.inv)}</p>${ALIVE[p.c] ? `<p><b>¿Sigue viva?</b> ${ALIVE[p.c]}</p>` : ""}</div>
+        <div class="facts">
+          <div class="fact"><b>Riego sept a marzo</b>${fmtEvery(p.wv)}</div>
+          <div class="fact"><b>Riego abril a agosto</b>${p.wi ? fmtEvery(p.wi) : "casi nada"}</div>
+          <div class="fact"><b>Luz</b>${esc(p.l)}</div>
+          <div class="fact"><b>Mascotas</b>${TOX[p.tx]}</div>
+          <div class="fact"><b>Abono</b>${p.f ? `cada ${p.f} días de sept a marzo` : "no necesita"}</div>
+        </div>
+        <div class="care">${rows.map(([k,v]) => `<div class="care-item"><b>${k}</b><div>${esc(v)}</div></div>`).join("")}</div>
+        ${p.tips?.length ? `<h2>Consejos</h2><ul>${p.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+        ${others.length ? `<div class="alts">También: ${others.map(o => `<button type="button" class="mini" data-alt="${esc(o.n)}">${esc(o.n)}</button>`).join("")}</div>` : ""}
+        <button type="button" class="btn primary" data-add>Agregar a mis plantas</button>
+        <p class="note">Pautas generales para Buenos Aires. Ajustá el riego según cómo esté la tierra.</p>
+      </div>`;
+    let img = null;
+    fillHero(out, [p.s, p.n]).then(v => img = v);
+    out.querySelector("[data-add]").onclick = () => openSheet(null, {
+      name: p.n, species: p.s, light: p.l, cycle: p.c, rest: p.rest || null,
+      wv: p.wv, wi: p.wi, fertEvery: p.f,
+      notes: [p.inv && "Otoño-invierno: "+p.inv, p.sol && "Sol: "+p.sol, ...(p.tips||[])].filter(Boolean).join("\n"),
+      photoUrl: img?.src || null
+    });
+    bindAlts(out);
+  }
+
+  async function fillHero(out, names){
     const box = out.querySelector("[data-hero]"); if(!box) return null;
-    if(userPhoto){ box.classList.remove("loading"); box.innerHTML = `<img src="${userPhoto}" alt="Tu foto">`; }
-    const img = await wikiImage([r.cientifico, r.nombre]);
+    const img = await wiki(names, false);
     if(!box.isConnected) return img;
-    if(img && !userPhoto){
+    if(img?.src){
       box.classList.remove("loading");
-      box.innerHTML = `<img src="${esc(img.src)}" alt="${esc(r.nombre)}"><a class="credit" href="${esc(img.page)}" target="_blank" rel="noopener">Foto: Wikipedia</a>`;
-    } else if(!img && !userPhoto){ box.remove(); }
+      box.innerHTML = `<img src="${esc(img.src)}" alt=""><a class="credit" href="${esc(img.page)}" target="_blank" rel="noopener">Foto: Wikipedia</a>`;
+    } else box.remove();
     return img;
   }
 
-  function renderCare(out, r, opts){
-    const {userPhoto, fromPhoto} = opts;
-    const rows = [["Sol",r.sol],["Riego",r.riegoTexto],["Temperatura",r.temperatura],["Sustrato",r.sustrato],["Abono",r.abonoTexto],["Poda",r.poda],["Plagas",r.plagas]].filter(([,v]) => v);
+  async function renderUnknown(out, q){
     out.hidden = false;
+    out.innerHTML = `<p class="thinking">Buscando "${esc(q)}" en Wikipedia…</p>`;
+    const w = await wiki([q], true);
+    if(!w){
+      out.innerHTML = `<p class="banner">No encontré "${esc(q)}". Revisá cómo está escrito o probá con el nombre científico.</p>`;
+      return;
+    }
     out.innerHTML = `
-      ${heroHTML()}
+      ${w.src ? `<div class="hero"><img src="${esc(w.src)}" alt=""><a class="credit" href="${esc(w.page)}" target="_blank" rel="noopener">Foto: Wikipedia</a></div>` : ""}
       <div class="result">
-        <h3>${esc(r.nombre)}</h3>
-        ${r.cientifico ? `<div class="sci">${esc(r.cientifico)}</div>` : ""}
-        ${fromPhoto ? confChip(r.confianza) : ""}
-        ${CYCLE[r.ciclo] ? `<div class="cyclebox ${r.ciclo}"><strong>${CYCLE[r.ciclo].t}</strong><p>${esc(r.cicloTexto || CYCLE[r.ciclo].d)}</p>${r.senalesViva ? `<p><b>¿Sigue viva?</b> ${esc(r.senalesViva)}</p>` : ""}</div>` : ""}
-        <div class="facts">
-          <div class="fact"><b>Riego</b>cada ${esc(r.riegoDias)} días</div>
-          <div class="fact"><b>Abono</b>${Number(r.abonoDias) ? `cada ${esc(r.abonoDias)} días` : "no por ahora"}</div>
-          <div class="fact"><b>Luz</b>${esc(r.luz)}</div>
-          <div class="fact"><b>Mascotas</b>${r.toxicaMascotas==="sí" ? "Tóxica" : r.toxicaMascotas==="no" ? "No tóxica" : "No se sabe"}</div>
-        </div>
-        ${rows.length ? `<div class="care">${rows.map(([k,v]) => `<div class="care-item"><b>${k}</b><div>${esc(v)}</div></div>`).join("")}</div>` : ""}
-        ${r.consejos?.length ? `<h2>Consejos</h2>${list(r.consejos)}` : ""}
-        ${Array.isArray(r.otras) && r.otras.length ? `<div class="alts">¿Era otra? ${r.otras.slice(0,4).map(n => `<button type="button" class="mini" data-alt="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : ""}
+        <h3>${esc(w.title)}</h3>
+        ${w.text ? `<p style="margin:0">${esc(w.text)}</p>` : ""}
+        <p class="banner">Esta planta no está en mi base de cuidados. Revisá que la foto sea la tuya; podés agregarla y completar el riego a mano.</p>
         <button type="button" class="btn primary" data-add>Agregar a mis plantas</button>
-        <p class="note">${fromPhoto ? "Es una estimación por foto. Si la confianza es baja, probá con otra foto más cerca de las hojas." : "Son pautas generales para Buenos Aires. Ajustá el riego según cómo esté la tierra."}</p>
+        <a class="note" href="${esc(w.page)}" target="_blank" rel="noopener">Leer más en Wikipedia</a>
       </div>`;
-    let wiki = null;
-    fillHero(out, r, userPhoto).then(v => wiki = v);
-    out.querySelector("[data-add]").onclick = () => openSheet(null, {
-      name: r.nombre, species: r.cientifico, light: r.luz, cycle: r.ciclo,
-      waterEvery: Number(r.riegoDias) || 7, fertEvery: Number(r.abonoDias) || 0,
-      notes: [r.cicloTexto && "Otoño-invierno: "+r.cicloTexto, r.senalesViva && "¿Sigue viva?: "+r.senalesViva, r.sol && "Sol: "+r.sol, r.riegoTexto && "Riego: "+r.riegoTexto, ...(r.consejos||[])].filter(Boolean).join("\n"),
-      photo: userPhoto || null, photoUrl: userPhoto ? null : (wiki?.src || null)
-    });
-    out.querySelectorAll("[data-alt]").forEach(b => b.onclick = () => { $("searchIn").value = b.dataset.alt; doSearch(); });
+    out.querySelector("[data-add]").onclick = () => openSheet(null, {name: q[0].toUpperCase()+q.slice(1), species: w.title, photoUrl: w.src || null});
   }
 
-  // ---------- buscar ----------
-  const searchCache = new Map();
-  let searchSeq = 0;
-  async function doSearch(){
+  function bindAlts(out){ out.querySelectorAll("[data-alt]").forEach(b => b.onclick = () => { $("searchIn").value = b.dataset.alt; doSearch(); }); }
+
+  function doSearch(){
     const q = $("searchIn").value.trim(), out = $("searchOut");
+    $("suggest").hidden = true;
     if(!q){ $("searchIn").focus(); return; }
     $("searchIn").blur();
-    const seq = ++searchSeq;
-    out.hidden = false; out.innerHTML = `<p class="thinking">Buscando ${esc(q)}…</p>`;
-    $("searchBtn").disabled = true;
-    try{
-      const ck = q.toLowerCase();
-      const r = searchCache.get(ck) || await askClaude({model: MODEL_TEXT, prompt: SEARCH_PROMPT(q)});
-      if(seq !== searchSeq) return;
-      if(!Number(r.riegoDias)){ out.innerHTML = `<p class="banner">No encontré una planta llamada "${esc(q)}". Probá con otro nombre o con el científico.</p>`; return; }
-      searchCache.set(ck, r);
-      renderCare(out, r, {fromPhoto:false});
-    }catch(e){ if(seq === searchSeq) out.innerHTML = `<p class="banner">${esc(errMsg(e))}</p>`; }
-    finally{ if(seq === searchSeq) $("searchBtn").disabled = false; }
+    const hits = find(q);
+    if(hits.length) renderPlant(out, hits[0], hits.slice(1,5));
+    else renderUnknown(out, q);
+    out.scrollIntoView({behavior:"smooth", block:"start"});
   }
   $("searchForm").addEventListener("submit", e => { e.preventDefault(); doSearch(); });
 
-  // ---------- foto ----------
-  $("fileIn").onchange = async e => {
-    const f = e.target.files[0]; if(!f) return;
-    idFile = f;
-    try{ idPhotoData = await shrink(f, 1100); }catch{ idPhotoData = null; toast("No se pudo leer esa foto."); return; }
-    $("dropImg").src = idPhotoData; $("dropImg").hidden = false; $("dropMsg").hidden = true;
-    $("askBtn").disabled = false; $("idOut").hidden = true;
-  };
-  $("askBtn").onclick = async () => {
-    if(!idPhotoData) return;
-    const dx = $("modeDx").checked, note = $("idNote").value.trim(), out = $("idOut");
-    out.hidden = false; out.innerHTML = `<p class="thinking">Mirando la foto…</p>`;
-    $("askBtn").disabled = true;
-    try{
-      const r = await askClaude({model: MODEL_VISION, prompt: dx ? DX_PROMPT(note) : ID_PROMPT(note), image: idPhotoData});
-      const thumb = await shrink(idFile, 360).catch(() => null);
-      if(!dx){
-        if(!Number(r.riegoDias)){ out.innerHTML = `<p class="banner">No reconozco una planta en esa foto. Probá con otra más cerca.</p>`; return; }
-        renderCare(out, r, {fromPhoto:true, userPhoto: thumb});
-      } else {
-        const g = {leve:"Leve", moderada:"Moderada", grave:"Grave"}[r.gravedad] || "";
-        out.innerHTML = `
-          ${heroHTML()}
-          <div class="result">
-            <h3>${esc(r.problema)}</h3>
-            <div class="sci">${esc(r.nombre)}</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">${confChip(r.confianza)}${g ? `<span class="chip ${r.gravedad==="grave"?"late":r.gravedad==="moderada"?"due":"fert"}">${g}</span>` : ""}</div>
-            ${r.reposo ? `<div class="cyclebox caduca"><strong>¿Puede ser reposo?</strong><p>${esc(r.reposo)}</p></div>` : ""}
-            ${r.causas?.length ? `<h2>Causas posibles</h2>${list(r.causas)}` : ""}
-            ${r.queHacer?.length ? `<h2>Qué hacer</h2>${list(r.queHacer)}` : ""}
-            <p class="note">Es una estimación por foto, no un diagnóstico seguro.</p>
-          </div>`;
-        fillHero(out, r, null);
-      }
-    }catch(e){ out.innerHTML = `<p class="banner">${esc(errMsg(e))}</p>`; }
-    finally{ $("askBtn").disabled = !idPhotoData; }
-  };
-
   // ---------- hoja de planta ----------
   function setThumb(src, name){ $("formThumb").innerHTML = src ? `<img src="${esc(src)}" alt="">` : esc((name||"?")[0].toUpperCase()); }
+  let formRest = null;
   function openSheet(p, prefill){
     editingId = p ? p.id : null;
     const d = p || prefill || {};
     $("sheetTitle").textContent = p ? "Editar planta" : "Nueva planta";
     $("fName").value = d.name || ""; $("fSpecies").value = d.species || ""; $("fPlace").value = d.place || "";
-    $("fLight").value = d.light || "Luz indirecta";
-    if(!$("fLight").value) $("fLight").value = "Luz indirecta";
+    $("fLight").value = d.light || "Luz indirecta"; if(!$("fLight").value) $("fLight").value = "Luz indirecta";
     $("fCycle").value = CYCLE[d.cycle] ? d.cycle : "perenne";
-    $("fWater").value = d.waterEvery || 7; $("fFert").value = d.fertEvery ?? 30;
+    $("fWaterV").value = d.wv ?? 7; $("fWaterI").value = d.wi ?? 14; $("fFert").value = d.fertEvery ?? 30;
     $("fLastW").value = d.lastWatered || todayISO(); $("fLastF").value = d.lastFert || todayISO();
     $("fNotes").value = d.notes || "";
-    formPhotoData = d.photo || null; formPhotoUrl = d.photoUrl || null;
+    formPhotoData = d.photo || null; formPhotoUrl = d.photoUrl || null; formRest = d.rest || null;
     setThumb(formPhotoData || formPhotoUrl, d.name);
     $("delBtn").hidden = !p; $("delConfirm").hidden = true;
     $("scrim").hidden = false;
@@ -577,12 +532,12 @@ Mirá la foto y decí qué problema puede tener la planta. Forma: {"nombre":"pla
     e.preventDefault();
     const name = $("fName").value.trim();
     if(!name){ $("fName").focus(); toast("Ponele un nombre"); return; }
+    const num = (id, def) => { const v = parseInt($(id).value); return isNaN(v) ? def : Math.max(0, v); };
     const p = {
       id: editingId || newId(), name,
       species: $("fSpecies").value.trim(), place: $("fPlace").value.trim(),
-      light: $("fLight").value, cycle: $("fCycle").value,
-      waterEvery: Math.max(1, parseInt($("fWater").value) || 7),
-      fertEvery: Math.max(0, parseInt($("fFert").value) || 0),
+      light: $("fLight").value, cycle: $("fCycle").value, rest: formRest,
+      wv: num("fWaterV", 7), wi: num("fWaterI", 14), fertEvery: num("fFert", 0),
       lastWatered: $("fLastW").value || todayISO(), lastFert: $("fLastF").value || todayISO(),
       notes: $("fNotes").value.trim(), photo: formPhotoData, photoUrl: formPhotoUrl, updatedAt: Date.now()
     };
@@ -590,21 +545,10 @@ Mirá la foto y decí qué problema puede tener la planta. Forma: {"nombre":"pla
   });
   $("addBtn").onclick = () => openSheet(null);
 
-  // ---------- ajustes ----------
-  function openCfg(){
-    $("apiKey").value = getKey();
-    $("keyStatus").textContent = getKey() ? "Hay una clave guardada en este celu." : "";
-    $("cfgScrim").hidden = false;
-  }
-  $("cfgBtn").onclick = openCfg; $("keyBannerBtn").onclick = openCfg;
+  // ---------- copia de seguridad ----------
+  $("cfgBtn").onclick = () => $("cfgScrim").hidden = false;
   $("cfgCancel").onclick = () => $("cfgScrim").hidden = true;
   $("cfgScrim").addEventListener("click", e => { if(e.target === $("cfgScrim")) $("cfgScrim").hidden = true; });
-  $("cfgSheet").addEventListener("submit", e => {
-    e.preventDefault();
-    const k = $("apiKey").value.trim();
-    try{ k ? localStorage.setItem(KEY, k) : localStorage.removeItem(KEY); }catch{}
-    $("cfgScrim").hidden = true; updateKeyBanner(); toast(k ? "Clave guardada" : "Clave borrada");
-  });
   $("exportBtn").onclick = () => {
     const blob = new Blob([JSON.stringify({version:1, exportedAt:new Date().toISOString(), plants}, null, 1)], {type:"application/json"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `mis-plantas-${todayISO()}.json`;
@@ -616,11 +560,10 @@ Mirá la foto y decí qué problema puede tener la planta. Forma: {"nombre":"pla
       const j = JSON.parse(await f.text()), arr = Array.isArray(j) ? j : j.plants;
       if(!Array.isArray(arr)) throw 0;
       const byId = new Map(plants.map(p => [p.id, p])); arr.forEach(p => p?.id && p?.name && byId.set(p.id, p));
-      plants = [...byId.values()]; persist(); render(); $("cfgScrim").hidden = true; toast(`Copia restaurada: ${arr.length} plantas`);
+      plants = [...byId.values()]; migrate(); persist(); render(); $("cfgScrim").hidden = true; toast(`Copia restaurada: ${arr.length} plantas`);
     }catch{ toast("Ese archivo no es una copia de Mis Plantas."); }
     e.target.value = "";
   };
-  function updateKeyBanner(){ $("keyBanner").hidden = !!getKey(); }
 
   // ---------- pestañas y util ----------
   function showTab(t){
@@ -633,7 +576,7 @@ Mirá la foto y decí qué problema puede tener la planta. Forma: {"nombre":"pla
   let tt;
   function toast(m){ const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2400); }
 
-  load(); render(); updateKeyBanner();
+  load(); render();
   if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
 </script>
