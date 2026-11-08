@@ -236,7 +236,7 @@ textarea{min-height:60px;resize:vertical}
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="plants.js"></script>
+<script src="plants.js?v=4"></script>
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -591,7 +591,11 @@ textarea{min-height:60px;resize:vertical}
   function toast(m){ const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2400); }
 
   load(); render();
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if("serviceWorker" in navigator){
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register("sw.js", {updateViaCache: "none"}).then(r => r.update()).catch(() => {});
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if(hadController) location.reload(); });
+  }
 })();
 </script>
 </body>
