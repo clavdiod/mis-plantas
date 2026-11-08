@@ -236,7 +236,7 @@ textarea{min-height:60px;resize:vertical}
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="plants.js?v=4"></script>
+<script src="plants.js?v=5"></script>
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -371,22 +371,43 @@ textarea{min-height:60px;resize:vertical}
   // Plantas fuera de la base: solo artículos con ficha de especie que hablen de una planta.
   const wikiCache = new Map();
   const PLANTY = /\b(planta|plantas|arbusto|árbol|arbol|hierba|herbácea|herbacea|enredadera|trepadora|suculenta|cactus|helecho|flor|flores|bulbo|angiosperma|familia [a-z]+aceae|[a-z]+aceae)\b/i;
+  // Va al artículo exacto (por nombre científico, después el género, después el nombre común)
+  // y solo acepta la foto si el artículo describe una planta y no es una página de desambiguación.
+  const PLANT_EN = /\b(plant|plants|shrub|tree|herb|herbaceous|perennial|succulent|cactus|fern|vine|climber|flowering|bulb|genus|species|[a-z]+aceae)\b/i;
+  const NOT_PLANT = /\b(hongo|fungus|fungi|bacteria|insecto|insect|animal|empresa|company|persona|actriz|actress|banda|band|película|film|ciudad|city|municipio|bacteri)/i;
+  function photoCandidates(names){
+    const out = [];
+    for(const n of names.filter(Boolean)){
+      const clean = n.replace(/\s+spp\.?$/i, "").replace(/\s*×\s*/g, " × ").trim();
+      out.push(clean);
+      if(clean.includes("×")) out.push(clean.replace(/\s*×\s*/g, " ").trim());
+      const genus = clean.split(" ")[0];
+      if(genus && genus !== clean && /^[A-Z][a-z]+$/.test(genus)) out.push(genus);
+    }
+    return [...new Set(out)];
+  }
   async function wikiPhoto(names){
-    for(const name of names.filter(Boolean)){
-      const key = "p|" + name.toLowerCase();
-      if(wikiCache.has(key)){ const v = wikiCache.get(key); if(v) return v; continue; }
+    const titles = photoCandidates(names);
+    const key = "p|" + titles.join("|").toLowerCase();
+    if(wikiCache.has(key)) return wikiCache.get(key);
+    let found = null;
+    outer: for(const t of titles){
       for(const lang of ["es","en"]){
         try{
-          const u = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&generator=search&gsrsearch=${encodeURIComponent(name)}&gsrlimit=3&prop=pageimages&piprop=thumbnail&pithumbsize=800`;
+          const u = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&titles=${encodeURIComponent(t)}&prop=pageimages|extracts|pageprops&exintro=1&explaintext=1&exsentences=2&piprop=thumbnail&pithumbsize=800`;
           const j = await (await fetch(u)).json();
-          const pages = Object.values(j?.query?.pages || {}).sort((a,b) => a.index - b.index);
-          const hit = pages.find(p => p.thumbnail?.source);
-          if(hit){ const v = {src: hit.thumbnail.source, title: hit.title, page: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g,"_"))}`}; wikiCache.set(key, v); return v; }
+          const page = Object.values(j?.query?.pages || {})[0];
+          if(!page || page.missing !== undefined || !page.thumbnail?.source) continue;
+          if(page.pageprops && "disambiguation" in page.pageprops) continue;
+          const text = page.extract || "";
+          if(NOT_PLANT.test(text.slice(0,140)) || !(lang === "es" ? PLANTY : PLANT_EN).test(text)) continue;
+          found = {src: page.thumbnail.source, title: page.title, page: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g,"_"))}`};
+          break outer;
         }catch{}
       }
-      wikiCache.set(key, null);
     }
-    return null;
+    wikiCache.set(key, found);
+    return found;
   }
   async function wikiPlant(q){
     const key = "t|" + q.toLowerCase();
@@ -397,7 +418,7 @@ textarea{min-height:60px;resize:vertical}
       const u = `https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&generator=search&gsrsearch=${encodeURIComponent(search)}&gsrlimit=6&prop=pageimages|extracts&exintro=1&explaintext=1&exsentences=3&exlimit=6&piprop=thumbnail&pithumbsize=800`;
       const j = await (await fetch(u)).json();
       const pages = Object.values(j?.query?.pages || {}).sort((a,b) => a.index - b.index);
-      const hit = pages.find(p => PLANTY.test(p.extract || ""));
+      const hit = pages.find(p => PLANTY.test(p.extract || "") && !NOT_PLANT.test((p.extract || "").slice(0,140)));
       if(hit) found = {src: hit.thumbnail?.source || null, title: hit.title, text: hit.extract || "", page: `https://es.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g,"_"))}`};
     }catch{ return null; }
     wikiCache.set(key, found);
@@ -459,7 +480,7 @@ textarea{min-height:60px;resize:vertical}
         <p class="note">Pautas generales para Buenos Aires. Ajustá el riego según cómo esté la tierra.</p>
       </div>`;
     let img = null;
-    fillHero(out, [p.s, p.n]).then(v => img = v);
+    fillHero(out, [p.s]).then(v => img = v);
     out.querySelector("[data-add]").onclick = () => openSheet(null, {
       name: p.n, species: p.s, light: p.l, cycle: p.c, rest: p.rest || null,
       wv: p.wv, wi: p.wi, fertEvery: p.f,

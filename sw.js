@@ -1,5 +1,5 @@
 // Siempre busca la versión nueva en internet; usa la copia guardada solo si no hay señal.
-const C = "mis-plantas-v4";
+const C = "mis-plantas-v5";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {
